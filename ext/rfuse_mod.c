@@ -3,7 +3,7 @@
 #include "file_info.h"
 #include "context.h"
 
-void Init_rfuse() {
+void Init_rfuse_ng() {
   VALUE mRFuse=rb_define_module("RFuse");
   file_info_init(mRFuse);
   context_init(mRFuse);

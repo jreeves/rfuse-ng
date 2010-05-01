@@ -1,7 +1,6 @@
 #!/usr/bin/ruby
 
-$:.unshift '../src'
-require("rfuse")
+require "rfuse_ng"
 
 class MyDir < Hash
   attr_accessor :name, :mode , :actime, :modtime, :uid, :gid

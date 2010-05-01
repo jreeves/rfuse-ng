@@ -4,3 +4,4 @@ pkg
 *.so
 *~
 Makefile
+pushgem.sh
