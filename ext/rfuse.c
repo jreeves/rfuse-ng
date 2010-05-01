@@ -113,7 +113,7 @@ static int rf_readlink(const char *path, char *buf, size_t size)
     return 0;
   }
 }
-//-----------------------------------------
+//----------------------------GETATTR
 static VALUE unsafe_getattr(VALUE *args){
   VALUE *values=(VALUE*)args;
   VALUE path = values[0];
@@ -833,38 +833,45 @@ static VALUE rf_initialize(
   
   struct intern_fuse *inf;
   Data_Get_Struct(self,struct intern_fuse,inf);
-  inf->fuse_op.getattr=rf_getattr;
-  //  inf->fuse_op.getdir=rf_getdir;
-  inf->fuse_op.readlink=rf_readlink;
-  inf->fuse_op.mkdir=rf_mkdir;
-  inf->fuse_op.mknod=rf_mknod;
-  inf->fuse_op.open=rf_open;
-  inf->fuse_op.release=rf_release;  //optional
-  inf->fuse_op.flush=rf_flush;      //optional
-  inf->fuse_op.chmod=rf_chmod;      //setattr
-  inf->fuse_op.chown=rf_chown;      //setattr
-  inf->fuse_op.truncate=rf_truncate;//setattr
-  inf->fuse_op.utime=rf_utime;      //settattr
-  inf->fuse_op.unlink=rf_unlink;
-  inf->fuse_op.rmdir=rf_rmdir;
-  inf->fuse_op.symlink=rf_symlink;
-  inf->fuse_op.rename=rf_rename;
-  inf->fuse_op.link=rf_link;
-  inf->fuse_op.read=rf_read;
-  inf->fuse_op.write=rf_write;
-  inf->fuse_op.setxattr=rf_setxattr;
-  inf->fuse_op.getxattr=rf_getxattr;
-  inf->fuse_op.listxattr=rf_listxattr;
-  inf->fuse_op.removexattr=rf_removexattr;
-  inf->fuse_op.readdir=rf_readdir;
-  inf->fuse_op.opendir=rf_opendir;
-  inf->fuse_op.releasedir=rf_releasedir;
-  inf->fuse_op.fsyncdir=rf_fsyncdir;
-
-  /* TODO
-  inf->fuse_op.statfs=rf_statfs;
-  inf->fuse_op.fsnyc=rf_fsync; //option
-  */
+  inf->fuse_op.getattr     = rf_getattr;
+  inf->fuse_op.readlink    = rf_readlink;
+  inf->fuse_op.mknod       = rf_mknod;
+  inf->fuse_op.mkdir       = rf_mkdir;
+  inf->fuse_op.unlink      = rf_unlink;
+  inf->fuse_op.rmdir       = rf_rmdir;
+  inf->fuse_op.symlink     = rf_symlink;
+  inf->fuse_op.rename      = rf_rename;
+  inf->fuse_op.link        = rf_link;
+  inf->fuse_op.chmod       = rf_chmod;
+  inf->fuse_op.chown       = rf_chown;
+  inf->fuse_op.truncate    = rf_truncate;
+  inf->fuse_op.utime       = rf_utime; // Deprecated, use utimens instead
+  inf->fuse_op.open        = rf_open;
+  inf->fuse_op.read        = rf_read;
+  inf->fuse_op.write       = rf_write;
+  //inf->fuse_op.statfs    = rf_statfs; // TODO
+  inf->fuse_op.flush       = rf_flush;
+  inf->fuse_op.release     = rf_release;
+  //inf->fuse_op.fsnyc     = rf_fsync; // TODO
+  inf->fuse_op.setxattr    = rf_setxattr;
+  inf->fuse_op.getxattr    = rf_getxattr;
+  inf->fuse_op.listxattr   = rf_listxattr;
+  inf->fuse_op.removexattr = rf_removexattr;
+  inf->fuse_op.opendir     = rf_opendir;
+  inf->fuse_op.readdir     = rf_readdir;
+  inf->fuse_op.releasedir  = rf_releasedir;
+  inf->fuse_op.fsyncdir    = rf_fsyncdir;
+  //inf->fuse_op.init      = rf_init;
+  //inf->fuse_op.destroy   = rf_destroy;
+  //inf->fuse_op.access    = rf_access;
+  //inf->fuse_op.create    = rf_create;
+  //inf->fuse_op.ftruncate = rf_ftruncate;
+  //inf->fuse_op.fgetattr  = rf_fgetattr;
+  //inf->fuse_op.lock      = rf_lock;
+  //inf->fuse_op.utimens   = rf_utimens;
+  //inf->fuse_op.bmap      = rf_bmap;
+  //inf->fuse_op.ioctl     = rf_ioctl;
+  //inf->fuse_op.poll      = rf_poll;
 
   struct fuse_args
     *kargs = rarray2fuseargs(kernelopts),
