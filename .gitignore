@@ -1,0 +1,6 @@
+pkg
+*.gemspec
+*.o
+*.so
+*~
+Makefile

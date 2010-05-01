@@ -1,0 +1,11 @@
+This project was forked from rfuse, a great FUSE language
+binding for Ruby.
+
+There is an other such binding called FuseFS but it does
+not implement all the necessary callbacks to do certain
+important operations.
+
+The rfuse project was probably abandoned in 2005, this is
+why I have started this project.
+
+Tamás László Fábián <giganetom@gmail.com>
