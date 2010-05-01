@@ -28,6 +28,7 @@ static int unsafe_return_error(VALUE *args){
   printf ("ERROR %s\n",STR2CSTR(info));
   return rb_funcall(info,rb_intern("errno"),0);
 }
+
 static int return_error(int def_error){
   /*if the raised error has a method errno the return that value else
     return def(ault)_error */
@@ -51,12 +52,12 @@ static VALUE unsafe_readdir(VALUE *args){
   VALUE ffi = values[3];
   struct fuse_context *ctx = fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("readdir"),5,wrap_context(ctx),path,filler,
-		    offset,ffi);
+        offset,ffi);
 }
 
   //call readdir with an Filler object
 static int rf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-		     off_t offset,struct fuse_file_info *ffi)
+         off_t offset,struct fuse_file_info *ffi)
 {
   VALUE fuse_module;
   VALUE rfiller_class;
@@ -486,7 +487,7 @@ static VALUE unsafe_read(VALUE *args){
   VALUE ffi = values[3];
   struct fuse_context *ctx=fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("read"),5,
-		    wrap_context(ctx),path,size,offset,ffi);
+        wrap_context(ctx),path,size,offset,ffi);
 }
 
 static int rf_read(const char *path,char * buf, size_t size,off_t offset,struct fuse_file_info *ffi)
@@ -526,7 +527,7 @@ static VALUE unsafe_write(VALUE *args){
   VALUE ffi = values[4];
   struct fuse_context *ctx=fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("write"),6,
-		    wrap_context(ctx),path,buffer,size,offset,ffi);
+        wrap_context(ctx),path,buffer,size,offset,ffi);
 }
 
 static int rf_write(const char *path,const char *buf,size_t size, off_t offset,struct fuse_file_info *ffi)
@@ -557,11 +558,11 @@ static VALUE unsafe_setxattr(VALUE *args){
   VALUE flags = values[4];
   struct fuse_context *ctx=fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("setxattr"),6,
-		    wrap_context(ctx),path,name,value,size,flags);
+        wrap_context(ctx),path,name,value,size,flags);
 }
 
 static int rf_setxattr(const char *path,const char *name,
-		       const char *value, size_t size, int flags)
+           const char *value, size_t size, int flags)
 {
   VALUE args[5];
   VALUE res;
@@ -587,11 +588,11 @@ static VALUE unsafe_getxattr(VALUE *args){
   VALUE size = values[2];
   struct fuse_context *ctx=fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("getxattr"),4,
-		    wrap_context(ctx),path,name,size);
+        wrap_context(ctx),path,name,size);
 }
 
 static int rf_getxattr(const char *path,const char *name,char *buf,
-		       size_t size)
+           size_t size)
 {
   VALUE args[3];
   VALUE res;
@@ -621,11 +622,11 @@ static VALUE unsafe_listxattr(VALUE *args){
   VALUE size = values[1];
   struct fuse_context *ctx=fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("listxattr"),3,
-		    wrap_context(ctx),path,size);
+        wrap_context(ctx),path,size);
 }
 
 static int rf_listxattr(const char *path,char *buf,
-		       size_t size)
+           size_t size)
 {
   VALUE args[2];
   VALUE res;
@@ -641,9 +642,9 @@ static int rf_listxattr(const char *path,char *buf,
     rbuf=rb_str2cstr(res,(long *)&length); //TODO protect this, too
     if (buf != NULL){
       if (length<=size) {
-	memcpy(buf,rbuf,length); //check for size
+  memcpy(buf,rbuf,length); //check for size
       } else {
-	return -ERANGE;
+  return -ERANGE;
       }
       printf("destination: %s,%d\n",buf,size);
       printf("source:      %s,%d\n",rbuf,length);
@@ -663,7 +664,7 @@ static VALUE unsafe_removexattr(VALUE *args){
   VALUE name = values[1];
   struct fuse_context *ctx=fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("removexattr"),3,
-		    wrap_context(ctx),path,name);
+        wrap_context(ctx),path,name);
 }
 
 static int rf_removexattr(const char *path,const char *name)
@@ -737,7 +738,7 @@ static VALUE unsafe_fsyncdir(VALUE *args){
   VALUE ffi =  values[2];
   struct fuse_context *ctx=fuse_get_context();
   return rb_funcall(fuse_object,rb_intern("fsyncdir"),3,wrap_context(ctx),path,
-		    meta,ffi);
+        meta,ffi);
 }
 
 static int rf_fsyncdir(const char *path,int meta,struct fuse_file_info *ffi)
@@ -781,7 +782,7 @@ VALUE rf_exit(VALUE self){
 VALUE rf_unmount(VALUE self){
   struct intern_fuse *inf;
   Data_Get_Struct(self,struct intern_fuse,inf);
-  fuse_unmount(inf->mountname);
+  fuse_unmount(inf->mountname, inf->fc);
   return Qnil;
 }
 
@@ -798,8 +799,38 @@ VALUE rf_invalidate(VALUE self,VALUE path){
 //-------------RUBY
 
 
-static VALUE rf_initialize(VALUE self,VALUE mountpoint,VALUE kernelopts,
-			   VALUE libopts) {
+static struct fuse_args * rarray2fuseargs(VALUE rarray){
+
+  Check_Type(rarray, T_ARRAY);
+
+  struct fuse_args *args = malloc(sizeof(struct fuse_args));
+
+  args->argc      = RARRAY(rarray)->len;
+  args->argv      = malloc(args->argc * sizeof(char *) + 1);
+  /* Nope, this isn't really 'allocated'. The elements
+   * of this array shouldn't be freed */
+  args->allocated = 0;
+
+  int i;
+  VALUE v;
+  for(i = 0; i < args->argc; i++) {
+    v = RARRAY(rarray)->ptr[i];
+    Check_Type(v, T_STRING);
+    args->argv[i] = STR2CSTR(RSTRING(v));
+  }
+  args->argv[args->argc] = NULL;
+  
+  return args;
+}
+
+static VALUE rf_initialize(
+  VALUE self,
+  VALUE mountpoint,
+  VALUE kernelopts,
+  VALUE libopts)
+{
+  Check_Type(mountpoint, T_STRING);
+  
   struct intern_fuse *inf;
   Data_Get_Struct(self,struct intern_fuse,inf);
   inf->fuse_op.getattr=rf_getattr;
@@ -834,10 +865,15 @@ static VALUE rf_initialize(VALUE self,VALUE mountpoint,VALUE kernelopts,
   inf->fuse_op.statfs=rf_statfs;
   inf->fuse_op.fsnyc=rf_fsync; //option
   */
+
+  struct fuse_args
+    *kargs = rarray2fuseargs(kernelopts),
+    *largs = rarray2fuseargs(libopts);
+
+  intern_fuse_init(inf, STR2CSTR(mountpoint), kargs, largs);
   
-  intern_fuse_init(inf,STR2CSTR(mountpoint),STR2CSTR(kernelopts),
-		   STR2CSTR(libopts));
   fuse_object=self;  // this won't work with multithreading!!!
+
   return self;
 }
 
@@ -852,7 +888,7 @@ static VALUE rf_new(VALUE class){
 VALUE rfuse_init(VALUE module){
   VALUE cFuse=rb_define_class_under(module,"Fuse",rb_cObject);
   rb_define_alloc_func(cFuse,rf_new);
-  //initialize: string mountpoint,string kernel_opts,string lib_opts
+  //initialize: string mountpoint,array kernel_opts,array lib_opts
   rb_define_method(cFuse,"initialize",rf_initialize,3);
   rb_define_method(cFuse,"loop",rf_loop,0);
   //rb_define_method(cFuse,"loop_mt",rf_loop_mt,0); TODO: not until RIKE!
