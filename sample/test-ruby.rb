@@ -43,6 +43,10 @@ class MyDir < Hash
     end
     return d
   end
+  def remove_obj(path)
+    d=self.search(File.dirname(path))
+    d.delete(File.basename(path))
+  end
   def search(path)
     puts "searching: " + path
     p=path.split('/').delete_if {|x| x==''}
@@ -222,8 +226,7 @@ class MyFuse < RFuse::Fuse
     puts "chmod:" + path + " Mode:" + mode.to_s
     puts ctx
     d=@root.search(path)
-    d.mode=mode #TODO: check if this is ok for dir
-    #raise Errno::EPERM.new(path)
+    d.mode=mode
   end
 
   def chown(ctx,path,uid,gid)
@@ -251,11 +254,13 @@ class MyFuse < RFuse::Fuse
   def unlink(ctx,path)
     puts "utime:" + path
     puts ctx
+    @root.remove_obj(path)
   end
 
   def rmdir(ctx,path)
     puts "rmdir:" + path
     puts ctx
+    @root.remove_obj(path)
   end
 
   def symlink(ctx,path,as)
