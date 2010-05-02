@@ -6,7 +6,6 @@ VALUE rfiller_initialize(VALUE self){
   return self;
 }
 
-
 VALUE rfiller_new(VALUE class){
   VALUE self;
   struct filler_t *f;

@@ -148,12 +148,30 @@ class MyFuse < RFuse::Fuse
     @root=root
   end
 
+  # The old, deprecated way: getdir
+  def getdir(ctx,path,filler)
+    puts "getdir:"+path
+    puts ctx
+    d=@root.search(path)
+    if d.isdir then
+      puts "getdir: listing directory"
+      d.each {|name,obj| 
+        stat=Stat.new(obj.uid,obj.gid,obj.mode,obj.size,obj.actime,obj.modtime,
+        0,0,0,0,0,0,0)
+        filler.push(name,stat,0)
+      }
+    else
+      raise Errno::ENOTDIR.new(path)
+    end
+  end
+
+  # The new, readdir way c+p-ed from the getdir way
   def readdir(ctx,path,filler,offset,ffi)
     puts "readdir:"+path
     puts ctx
     d=@root.search(path)
     if d.isdir then
-      puts "getdir: listing directory"
+      puts "readdir: listing directory"
       d.each {|name,obj| 
         stat=Stat.new(obj.uid,obj.gid,obj.mode,obj.size,obj.actime,obj.modtime,
         0,0,0,0,0,0,0)

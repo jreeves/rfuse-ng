@@ -1,3 +1,6 @@
+INTRO
+=====
+
 This project was forked from rfuse, a great FUSE language
 binding for Ruby.
 
@@ -7,5 +10,14 @@ important operations.
 
 The rfuse project was probably abandoned in 2005, this is
 why I have started this project.
+
+DEPENDENCIES
+============
+
+ruby 1.8
+fuse 2.8
+
+AUTHOR
+======
 
 Tamás László Fábián <giganetom@gmail.com>

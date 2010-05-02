@@ -1,2 +1,10 @@
-2010-05-01: 0.1 Froked from rfuse, fixed compile warnings, gemified.
+2010-05-01: 0.2.0
 
+Switched to Fuse API 26 from 22. Fixed incompatibilities.
+Arranged fuse_op filling code, made a TODO list of missing
+functions.
+
+
+2010-05-01: 0.1
+
+Froked from rfuse, fixed compile warnings, gemified.
