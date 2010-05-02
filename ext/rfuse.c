@@ -81,15 +81,19 @@ static int rf_readdir(const char *path, void *buf,
   args[0]=rb_str_new2(path);
 
   fuse_module = rb_const_get(rb_cObject, rb_intern("RFuse"));
+
   rfiller_class=rb_const_get(fuse_module,rb_intern("Filler"));
   rfiller_instance=rb_funcall(rfiller_class,rb_intern("new"),0);
   Data_Get_Struct(rfiller_instance,struct filler_t,fillerc);
+
   fillerc->filler=filler;//Init the filler by hand.... TODO: cleaner
   fillerc->buffer=buf;
   args[1]=rfiller_instance;
   args[2]=INT2NUM(offset);
   args[3]=wrap_file_info(ffi);
+
   res=rb_protect((VALUE (*)())unsafe_readdir,(VALUE)args,&error);
+
   if (error)
   {
     return -(return_error(ENOENT));
@@ -97,7 +101,7 @@ static int rf_readdir(const char *path, void *buf,
   else
   {
     return 0;
-  };
+  }
 }
 
 //----------------------READLINK
@@ -133,7 +137,6 @@ static int rf_readlink(const char *path, char *buf, size_t size)
   }
 }
 
-/*
 //----------------------GETDIR
 
 static VALUE unsafe_getdir(VALUE *args)
@@ -160,13 +163,22 @@ static int rf_getdir(const char *path, fuse_dirh_t dh, fuse_dirfil_t df)
   struct filler_t *fillerc;
   int error = 0;
 
+  //create a filler object
   args[0]=rb_str_new2(path);
 
   fuse_module = rb_const_get(rb_cObject, rb_intern("RFuse"));
 
+  rfiller_class    = rb_const_get(fuse_module,rb_intern("Filler"));
+  rfiller_instance = rb_funcall(rfiller_class,rb_intern("new"),0);
+
+  Data_Get_Struct(rfiller_instance,struct filler_t,fillerc);
+
+  fillerc->df = df;
+  fillerc->dh = dh;
+
   args[1]=rfiller_instance;
 
-  res=rb_protect((VALUE (*)())unsafe_readdir,(VALUE)args,&error);
+  res = rb_protect((VALUE (*)())unsafe_getdir, (VALUE)args, &error);
 
   if (error)
   {
@@ -177,7 +189,6 @@ static int rf_getdir(const char *path, fuse_dirh_t dh, fuse_dirfil_t df)
     return 0;
   }
 }
-*/
 
 //----------------------MKNOD
 
@@ -1125,7 +1136,7 @@ static VALUE rf_initialize(
   Data_Get_Struct(self,struct intern_fuse,inf);
   inf->fuse_op.getattr     = rf_getattr;
   inf->fuse_op.readlink    = rf_readlink;
-  //inf->fuse_op.getdir      = rf_getdir; // Deprecated
+  inf->fuse_op.getdir      = rf_getdir; // Deprecated
   inf->fuse_op.mknod       = rf_mknod;
   inf->fuse_op.mkdir       = rf_mkdir;
   inf->fuse_op.unlink      = rf_unlink;

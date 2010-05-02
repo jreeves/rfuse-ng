@@ -156,16 +156,15 @@ class MyFuse < RFuse::Fuse
     if d.isdir then
       puts "getdir: listing directory"
       d.each {|name,obj| 
-        stat=Stat.new(obj.uid,obj.gid,obj.mode,obj.size,obj.actime,obj.modtime,
-        0,0,0,0,0,0,0)
-        filler.push(name,stat,0)
+        # Use push_old to add this entry, no need for Stat here
+        filler.push_old(name, obj.mode, 0)
       }
     else
       raise Errno::ENOTDIR.new(path)
     end
   end
 
-  # The new, readdir way c+p-ed from the getdir way
+  # The new readdir way, c+p-ed from getdir
   def readdir(ctx,path,filler,offset,ffi)
     puts "readdir:"+path
     puts ctx
