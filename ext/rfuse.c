@@ -344,9 +344,17 @@ static int rf_release(const char *path, struct fuse_file_info *ffi)
   }
 }
 
+//----------------------FSYNC
+static int rf_fsync(const char *path, int datasync, struct fuse_file_info *ffi)
+{
+  //TODO
+  return 0;
+}
+
 //----------------------FLUSH
 
-static VALUE unsafe_flush(VALUE *args){
+static VALUE unsafe_flush(VALUE *args)
+{
   VALUE path = args[0];
   VALUE ffi  = args[1];
 
@@ -742,6 +750,13 @@ static int rf_write(const char *path,const char *buf,size_t size, off_t offset,s
   }
 }
 
+//----------------------STATFS
+static int rf_statfs(const char * path, struct statvfs * vfsinfo)
+{
+  // TODO
+  return 0;
+}
+
 //----------------------SETXATTR
 
 static VALUE unsafe_setxattr(VALUE *args)
@@ -1008,6 +1023,65 @@ static int rf_fsyncdir(const char *path,int meta,struct fuse_file_info *ffi)
   }
 }
 
+//----------------------INIT
+
+static void *rf_init(struct fuse_conn_info *conn)
+{
+  // TODO
+  return NULL;
+}
+
+//----------------------DESTROY
+
+static void rf_destroy(void *user_data)
+{
+  // TODO
+}
+
+//----------------------ACCESS
+
+static int rf_access(const char *path, int mask)
+{
+  // TODO
+  return 0;
+}
+
+//----------------------CREATE
+
+static int rf_create(const char *path, mode_t mode,
+  struct fuse_file_info *ffi)
+{
+  // TODO
+  return 0;
+}
+
+//----------------------FTRUNCATE
+
+static int rf_ftruncate(const char *path, off_t size,
+  struct fuse_file_info *ffi)
+{
+  // TODO
+  return 0;
+}
+
+//----------------------FGETATTR
+
+static int rf_fgetattr(const char *path, struct stat *stbuf,
+  struct fuse_file_info *ffi)
+{
+  // TODO
+  return 0;
+}
+
+//----------------------LOCK
+
+static int rf_lock(const char *path, struct fuse_file_info *ffi,
+  int cmd, struct flock *lock)
+{
+  // TODO
+  return 0;
+}
+
 //----------------------UTIMENS
 
 static VALUE unsafe_utimens(VALUE *args)
@@ -1060,6 +1134,32 @@ static int rf_utimens(const char * path, const struct timespec tv[2])
   {
     return 0;
   }
+}
+
+//----------------------BMAP
+
+static int rf_bmap(const char *path, size_t blocksize, uint64_t *idx)
+{
+  //TODO
+  return 0;
+}
+
+//----------------------IOCTL
+
+static int rf_ioctl(const char *path, int cmd, void *arg,
+  struct fuse_file_info *ffi, unsigned int flags, void *data)
+{
+  //TODO
+  return 0;
+}
+
+//----------------------POLL
+
+static int rf_poll(const char *path, struct fuse_file_info *ffi,
+  struct fuse_pollhandle *ph, unsigned *reventsp)
+{
+  //TODO
+  return 0;
 }
 
 //----------------------LOOP
@@ -1151,10 +1251,10 @@ static VALUE rf_initialize(
   inf->fuse_op.open        = rf_open;
   inf->fuse_op.read        = rf_read;
   inf->fuse_op.write       = rf_write;
-  //inf->fuse_op.statfs    = rf_statfs; // TODO
+  inf->fuse_op.statfs      = rf_statfs; //TODO
   inf->fuse_op.flush       = rf_flush;
   inf->fuse_op.release     = rf_release;
-  //inf->fuse_op.fsnyc     = rf_fsync; // TODO
+  inf->fuse_op.fsync       = rf_fsync; // TODO
   inf->fuse_op.setxattr    = rf_setxattr;
   inf->fuse_op.getxattr    = rf_getxattr;
   inf->fuse_op.listxattr   = rf_listxattr;
@@ -1163,17 +1263,17 @@ static VALUE rf_initialize(
   inf->fuse_op.readdir     = rf_readdir;
   inf->fuse_op.releasedir  = rf_releasedir;
   inf->fuse_op.fsyncdir    = rf_fsyncdir;
-  //inf->fuse_op.init      = rf_init; // TODO
-  //inf->fuse_op.destroy   = rf_destroy; // TODO
-  //inf->fuse_op.access    = rf_access; // TODO
-  //inf->fuse_op.create    = rf_create; // TODO
-  //inf->fuse_op.ftruncate = rf_ftruncate; // TODO
-  //inf->fuse_op.fgetattr  = rf_fgetattr; // TODO
-  //inf->fuse_op.lock      = rf_lock; // TODO
+  inf->fuse_op.init        = rf_init; // TODO
+  inf->fuse_op.destroy     = rf_destroy; // TODO
+  inf->fuse_op.access      = rf_access; // TODO
+  inf->fuse_op.create      = rf_create; // TODO
+  inf->fuse_op.ftruncate   = rf_ftruncate; // TODO
+  inf->fuse_op.fgetattr    = rf_fgetattr; // TODO
+  inf->fuse_op.lock        = rf_lock; // TODO
   inf->fuse_op.utimens     = rf_utimens;
-  //inf->fuse_op.bmap      = rf_bmap; // TODO
-  //inf->fuse_op.ioctl     = rf_ioctl; // TODO
-  //inf->fuse_op.poll      = rf_poll; // TODO
+  inf->fuse_op.bmap        = rf_bmap; // TODO
+  inf->fuse_op.ioctl       = rf_ioctl; // TODO
+  inf->fuse_op.poll        = rf_poll; // TODO
 
   struct fuse_args
     *kargs = rarray2fuseargs(kernelopts),
