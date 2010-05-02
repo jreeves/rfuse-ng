@@ -733,12 +733,14 @@ static int rf_write(const char *path,const char *buf,size_t size, off_t offset,s
   VALUE args[5];
   VALUE res;
   int error = 0;
+
   args[0]=rb_str_new2(path);
   args[1]=rb_str_new2(buf);
   args[2]=INT2NUM(size);
   args[3]=INT2NUM(offset);
   args[4]=wrap_file_info(ffi);
-  res=rb_protect((VALUE (*)())unsafe_write,(VALUE) args,&error);
+
+  res = rb_protect((VALUE (*)())unsafe_write,(VALUE) args, &error);
 
   if (error)
   {
@@ -746,7 +748,7 @@ static int rf_write(const char *path,const char *buf,size_t size, off_t offset,s
   }
   else
   {
-    return 0;
+    return NUM2INT(res);
   }
 }
 
@@ -1220,6 +1222,12 @@ VALUE rf_invalidate(VALUE self,VALUE path)
   return fuse_invalidate(inf->fuse,STR2CSTR(path)); //TODO: check if str?
 }
 
+#define RESPOND_TO(obj,methodname) \
+  rb_funcall( \
+    obj,rb_intern("respond_to?"), \
+    1, rb_str_new2(methodname) \
+  ) == Qtrue
+
 //-------------RUBY
 
 static VALUE rf_initialize(
@@ -1234,46 +1242,86 @@ static VALUE rf_initialize(
 
   struct intern_fuse *inf;
   Data_Get_Struct(self,struct intern_fuse,inf);
-  inf->fuse_op.getattr     = rf_getattr;
-  inf->fuse_op.readlink    = rf_readlink;
-  inf->fuse_op.getdir      = rf_getdir; // Deprecated
-  inf->fuse_op.mknod       = rf_mknod;
-  inf->fuse_op.mkdir       = rf_mkdir;
-  inf->fuse_op.unlink      = rf_unlink;
-  inf->fuse_op.rmdir       = rf_rmdir;
-  inf->fuse_op.symlink     = rf_symlink;
-  inf->fuse_op.rename      = rf_rename;
-  inf->fuse_op.link        = rf_link;
-  inf->fuse_op.chmod       = rf_chmod;
-  inf->fuse_op.chown       = rf_chown;
-  inf->fuse_op.truncate    = rf_truncate;
-  inf->fuse_op.utime       = rf_utime; // Deprecated
-  inf->fuse_op.open        = rf_open;
-  inf->fuse_op.read        = rf_read;
-  inf->fuse_op.write       = rf_write;
-  inf->fuse_op.statfs      = rf_statfs; //TODO
-  inf->fuse_op.flush       = rf_flush;
-  inf->fuse_op.release     = rf_release;
-  inf->fuse_op.fsync       = rf_fsync; // TODO
-  inf->fuse_op.setxattr    = rf_setxattr;
-  inf->fuse_op.getxattr    = rf_getxattr;
-  inf->fuse_op.listxattr   = rf_listxattr;
-  inf->fuse_op.removexattr = rf_removexattr;
-  inf->fuse_op.opendir     = rf_opendir;
-  inf->fuse_op.readdir     = rf_readdir;
-  inf->fuse_op.releasedir  = rf_releasedir;
-  inf->fuse_op.fsyncdir    = rf_fsyncdir;
-  inf->fuse_op.init        = rf_init; // TODO
-  inf->fuse_op.destroy     = rf_destroy; // TODO
-  inf->fuse_op.access      = rf_access; // TODO
-  inf->fuse_op.create      = rf_create; // TODO
-  inf->fuse_op.ftruncate   = rf_ftruncate; // TODO
-  inf->fuse_op.fgetattr    = rf_fgetattr; // TODO
-  inf->fuse_op.lock        = rf_lock; // TODO
-  inf->fuse_op.utimens     = rf_utimens;
-  inf->fuse_op.bmap        = rf_bmap; // TODO
-  inf->fuse_op.ioctl       = rf_ioctl; // TODO
-  inf->fuse_op.poll        = rf_poll; // TODO
+  if (RESPOND_TO(self,"getattr"))
+    inf->fuse_op.getattr     = rf_getattr;
+  if (RESPOND_TO(self,"readlink"))
+    inf->fuse_op.readlink    = rf_readlink;
+  if (RESPOND_TO(self,"getdir"))
+    inf->fuse_op.getdir      = rf_getdir;  // Deprecated
+  if (RESPOND_TO(self,"mknod"))
+    inf->fuse_op.mknod       = rf_mknod;
+  if (RESPOND_TO(self,"mkdir"))
+    inf->fuse_op.mkdir       = rf_mkdir;
+  if (RESPOND_TO(self,"unlink"))
+    inf->fuse_op.unlink      = rf_unlink;
+  if (RESPOND_TO(self,"rmdir"))
+    inf->fuse_op.rmdir       = rf_rmdir;
+  if (RESPOND_TO(self,"symlink"))
+    inf->fuse_op.symlink     = rf_symlink;
+  if (RESPOND_TO(self,"rename"))
+    inf->fuse_op.rename      = rf_rename;
+  if (RESPOND_TO(self,"link"))
+    inf->fuse_op.link        = rf_link;
+  if (RESPOND_TO(self,"chmod"))
+    inf->fuse_op.chmod       = rf_chmod;
+  if (RESPOND_TO(self,"chown"))
+    inf->fuse_op.chown       = rf_chown;
+  if (RESPOND_TO(self,"truncate"))
+    inf->fuse_op.truncate    = rf_truncate;
+  if (RESPOND_TO(self,"utime"))
+    inf->fuse_op.utime       = rf_utime;    // Deprecated
+  if (RESPOND_TO(self,"open"))
+    inf->fuse_op.open        = rf_open;
+  if (RESPOND_TO(self,"read"))
+    inf->fuse_op.read        = rf_read;
+  if (RESPOND_TO(self,"write"))
+    inf->fuse_op.write       = rf_write;
+  if (RESPOND_TO(self,"statfs"))
+    inf->fuse_op.statfs      = rf_statfs;   //TODO
+  if (RESPOND_TO(self,"flush"))
+    inf->fuse_op.flush       = rf_flush;
+  if (RESPOND_TO(self,"release"))
+    inf->fuse_op.release     = rf_release;
+  if (RESPOND_TO(self,"fsync"))
+    inf->fuse_op.fsync       = rf_fsync;    // TODO
+  if (RESPOND_TO(self,"setxattr"))
+    inf->fuse_op.setxattr    = rf_setxattr;
+  if (RESPOND_TO(self,"getxattr"))
+    inf->fuse_op.getxattr    = rf_getxattr;
+  if (RESPOND_TO(self,"listxattr"))
+    inf->fuse_op.listxattr   = rf_listxattr;
+  if (RESPOND_TO(self,"removexattr"))
+    inf->fuse_op.removexattr = rf_removexattr;
+  if (RESPOND_TO(self,"opendir"))
+    inf->fuse_op.opendir     = rf_opendir;
+  if (RESPOND_TO(self,"readdir"))
+    inf->fuse_op.readdir     = rf_readdir;
+  if (RESPOND_TO(self,"releasedir"))
+    inf->fuse_op.releasedir  = rf_releasedir;
+  if (RESPOND_TO(self,"fsyncdir"))
+    inf->fuse_op.fsyncdir    = rf_fsyncdir;
+  if (RESPOND_TO(self,"init"))
+    inf->fuse_op.init        = rf_init;      // TODO
+  if (RESPOND_TO(self,"destroy"))
+    inf->fuse_op.destroy     = rf_destroy;   // TODO
+  if (RESPOND_TO(self,"access"))
+    inf->fuse_op.access      = rf_access;    // TODO
+  if (RESPOND_TO(self,"create"))
+    inf->fuse_op.create      = rf_create;    // TODO
+  if (RESPOND_TO(self,"ftruncate"))
+    inf->fuse_op.ftruncate   = rf_ftruncate; // TODO
+  if (RESPOND_TO(self,"fgetattr"))
+    inf->fuse_op.fgetattr    = rf_fgetattr;  // TODO
+  if (RESPOND_TO(self,"lock"))
+    inf->fuse_op.lock        = rf_lock;      // TODO
+  if (RESPOND_TO(self,"utimens"))
+    inf->fuse_op.utimens     = rf_utimens;
+  if (RESPOND_TO(self,"bmap"))
+    inf->fuse_op.bmap        = rf_bmap;      // TODO
+  if (RESPOND_TO(self,"ioctl"))
+    inf->fuse_op.ioctl       = rf_ioctl;     // TODO
+  if (RESPOND_TO(self,"poll"))
+    inf->fuse_op.poll        = rf_poll;      // TODO
 
   struct fuse_args
     *kargs = rarray2fuseargs(kernelopts),

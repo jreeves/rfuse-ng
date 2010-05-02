@@ -295,7 +295,7 @@ class MyFuse < RFuse::Fuse
     else
       d.content=buf
     end
-    return nil
+    return size
   end
 
   def setxattr(ctx,path,name,value,size,flags)
