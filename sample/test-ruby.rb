@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/ruby -rubygems
 
 require "rfuse_ng"
 
@@ -286,7 +286,7 @@ class MyFuse < RFuse::Fuse
       raise Errno::EISDIR.new(path)
       return nil
     else
-      return d.content
+      return d.content[offset..offset + size - 1]
     end
   end
 

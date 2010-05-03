@@ -696,7 +696,8 @@ static int rf_read(const char *path,char * buf, size_t size,off_t offset,struct 
   }
   else
   {
-    rbuf = rb_str2cstr(res,&length); //TODO protect this, too
+    length = NUM2LONG(rb_funcall(res, rb_intern("length"), 0));
+    rbuf = rb_str2cstr(res, &length);
     if (length<=size)
     {
       memcpy(buf,rbuf,length);
@@ -704,10 +705,8 @@ static int rf_read(const char *path,char * buf, size_t size,off_t offset,struct 
     }
     else
     {
-      //TODO: This could be dangerous.
-      //Perhaps raise an exception or return an error
-      memcpy(buf,rbuf,size); 
-      return size;
+      //This cannot happen => IO error.
+      return -(return_error(ENOENT));
     }
   }
 }
