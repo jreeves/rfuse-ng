@@ -1,5 +1,7 @@
 #!/usr/bin/ruby -rubygems
 
+# TestFS for RFuse-ng
+
 require "rfuse_ng"
 
 class MyDir < Hash
@@ -48,19 +50,15 @@ class MyDir < Hash
     d.delete(File.basename(path))
   end
   def search(path)
-    puts "searching: " + path
     p=path.split('/').delete_if {|x| x==''}
     if p.length==0 then
-      puts "found root"
       return self
     else
       return self.follow(p)
     end
   end
   def follow (path_array)
-    puts "following: " + path_array.to_s
     if path_array.length==0 then
-      puts "found me!" + @name
       return self
     else
       d=self[path_array.shift]
@@ -153,28 +151,22 @@ class MyFuse < RFuse::Fuse
   end
 
   # The old, deprecated way: getdir
-  def getdir(ctx,path,filler)
-    puts "getdir:"+path
-    puts ctx
-    d=@root.search(path)
-    if d.isdir then
-      puts "getdir: listing directory"
-      d.each {|name,obj| 
-        # Use push_old to add this entry, no need for Stat here
-        filler.push_old(name, obj.mode, 0)
-      }
-    else
-      raise Errno::ENOTDIR.new(path)
-    end
-  end
+  #def getdir(ctx,path,filler)
+  #  d=@root.search(path)
+  #  if d.isdir then
+  #    d.each {|name,obj| 
+  #      # Use push_old to add this entry, no need for Stat here
+  #      filler.push_old(name, obj.mode, 0)
+  #    }
+  #  else
+  #    raise Errno::ENOTDIR.new(path)
+  #  end
+  #end
 
   # The new readdir way, c+p-ed from getdir
   def readdir(ctx,path,filler,offset,ffi)
-    puts "readdir:"+path
-    puts ctx
     d=@root.search(path)
     if d.isdir then
-      puts "readdir: listing directory"
       d.each {|name,obj| 
         stat=Stat.new(obj.uid,obj.gid,obj.mode,obj.size,obj.actime,obj.modtime,
         0,0,0,0,0,0,0)
@@ -186,102 +178,73 @@ class MyFuse < RFuse::Fuse
   end
 
   def getattr(ctx,path)
-    puts "getattr:" + path
-    puts ctx
     d=@root.search(path)
     stat=Stat.new(d.uid,d.gid,d.mode,d.size,d.actime,d.modtime,
       0,0,0,0,0,0,0)
-    puts d
     return stat
   end #getattr
 
   def mkdir(ctx,path,mode)
-    puts "mkdir:" + path + " Mode:" + mode.to_s
-    puts ctx
     @root.insert_obj(MyDir.new(File.basename(path),mode),path)
   end #mkdir
 
   def mknod(ctx,path,mode,dev)
-    puts "mknod:" + path + " Mode:" + mode.to_s + " Device:" + dev.to_s
-    puts ctx
     @root.insert_obj(MyFile.new(File.basename(path),mode,ctx.uid,ctx.gid),path)
   end #mknod
 
-  def open(ctx,path,ffi)
-    puts "open:" + path
-    puts ctx
-  end
+  #def open(ctx,path,ffi)
+  #end
 
-  def release(ctx,path,fi)
-    puts "release:" + path 
-    puts ctx
-  end
+  #def release(ctx,path,fi)
+  #end
 
-  def flush(ctx,path,fi)
-    puts "flush:" + path 
-    puts ctx
-  end
+  #def flush(ctx,path,fi)
+  #end
 
   def chmod(ctx,path,mode)
-    puts "chmod:" + path + " Mode:" + mode.to_s
-    puts ctx
     d=@root.search(path)
     d.mode=mode
   end
 
   def chown(ctx,path,uid,gid)
-    puts "chown:" + path + " UID:" + uid.to_s + " GID:" + gid.to_s
-    puts ctx
     d=@root.search(path)
     d.uid=uid
     d.gid=gid
   end
 
   def truncate(ctx,path,offset)
-    puts "truncate:" + path + " offset: " + offset.to_s
-    puts ctx
+    d=@root.search(path)
+    d.content = d.content[0..offset]
   end
 
   def utime(ctx,path,actime,modtime)
-    puts "utime:" + path + " actime:" + actime.to_s + 
-      " modtime:" + modtime.to_s
-    puts ctx
     d=@root.search(path)
     d.actime=actime
     d.modtime=modtime
   end
 
   def unlink(ctx,path)
-    puts "utime:" + path
-    puts ctx
     @root.remove_obj(path)
   end
 
   def rmdir(ctx,path)
-    puts "rmdir:" + path
-    puts ctx
     @root.remove_obj(path)
   end
 
-  def symlink(ctx,path,as)
-    puts "symlink:" + path + " as:" + as
-    puts ctx
-  end
+  #def symlink(ctx,path,as)
+  #end
 
   def rename(ctx,path,as)
-    puts "rename:" + path + " as:" + as
-    puts ctx
+    d = @root.search(path)
+    @root.remove_obj(path)
+    @root.insert_obj(d,path)
   end
 
-  def link(ctx,path,as)
-    puts "link:" + path + " as:" + as
-    puts ctx
-  end
+  #def link(ctx,path,as)
+  #end
 
   def read(ctx,path,size,offset,fi)
-    puts "read:" + path + " size:" + size.to_s + " offset:" + offset.to_s
-    puts ctx
-    d=@root.search(path)
+    d = @root.search(path)
     if (d.isdir) 
       raise Errno::EISDIR.new(path)
       return nil
@@ -291,9 +254,6 @@ class MyFuse < RFuse::Fuse
   end
 
   def write(ctx,path,buf,offset,fi)
-    puts "write:" + path
-    puts ctx
-    puts "content:" + buf
     d=@root.search(path)
     if (d.isdir) 
       raise Errno::EISDIR.new(path)
@@ -304,68 +264,44 @@ class MyFuse < RFuse::Fuse
   end
 
   def setxattr(ctx,path,name,value,size,flags)
-    puts
-      "setxattr:" + path +
-      " name:" + name + 
-      " value:" + value.inspect +
-      " size:" + size.to_s +
-      " flags:" + flags.to_s +
-      " rubysize:" + value.size.to_s
-    puts ctx
     d=@root.search(path)
     d.setxattr(name,value,flags)
   end
 
   def getxattr(ctx,path,name,size)
-    puts
-      "getxattr:" + path +
-      " name:" + name + 
-      " size:" + size.to_s
-    puts ctx
     d=@root.search(path)
     if (d) 
-      puts "found:" + d.name
       value=d.getxattr(name)
-      if (value)  
-        puts "return: "+value.to_s + " size:"+value.size.to_s
-      else 
+      if (!value)
         value=""
         #raise Errno::ENOENT.new #TODO raise the correct error :
         #NOATTR which is not implemented in Linux/glibc
       end
     else
-      raise Errno::ENOENT.new #TODO put this into DIR and FILE?
+      raise Errno::ENOENT.new
     end
     return value
   end
 
   def listxattr(ctx,path,size)
-    puts "listxattr:" + path + " size:" + size.to_s
-    puts ctx
     d=@root.search(path)
     value= d.listxattr()
-    puts "listxattr return: "+ value
     return value
   end
 
   def removexattr(ctx,path,name)
-    puts "removexattr:" + path + " name:" + name
-    puts ctx
     d=@root.search(path)
     d.removexattr(name)
   end
 
-  def opendir(ctx,path,ffi)
-    puts 'opendir:'+ path
-  end
+  #def opendir(ctx,path,ffi)
+  #end
 
-  def releasedir(ctx,path,ffi)
-    puts 'releasedir:'+ path
-  end
+  #def releasedir(ctx,path,ffi)
+  #end
 
-  def fsyncdir(ctx,path,meta,ffi)
-    puts 'fsyncdir:'+ path
-  end
+  #def fsyncdir(ctx,path,meta,ffi)
+  #end
 
 end #class Fuse
 
