@@ -718,27 +718,26 @@ static VALUE unsafe_write(VALUE *args)
 {
   VALUE path   = args[0];
   VALUE buffer = args[1];
-  VALUE size   = args[2];
-  VALUE offset = args[3];
-  VALUE ffi    = args[4];
+  VALUE offset = args[2];
+  VALUE ffi    = args[3];
 
   struct fuse_context *ctx=fuse_get_context();
 
-  return rb_funcall(fuse_object,rb_intern("write"),6,
-        wrap_context(ctx),path,buffer,size,offset,ffi);
+  return rb_funcall(fuse_object,rb_intern("write"),5,
+        wrap_context(ctx),path,buffer,offset,ffi);
 }
 
-static int rf_write(const char *path,const char *buf,size_t size, off_t offset,struct fuse_file_info *ffi)
+static int rf_write(const char *path,const char *buf,size_t size,
+  off_t offset,struct fuse_file_info *ffi)
 {
-  VALUE args[5];
+  VALUE args[4];
   VALUE res;
   int error = 0;
 
   args[0]=rb_str_new2(path);
-  args[1]=rb_str_new2(buf);
-  args[2]=INT2NUM(size);
-  args[3]=INT2NUM(offset);
-  args[4]=wrap_file_info(ffi);
+  args[1]=rb_str_new(buf, size);
+  args[2]=INT2NUM(offset);
+  args[3]=wrap_file_info(ffi);
 
   res = rb_protect((VALUE (*)())unsafe_write,(VALUE) args, &error);
 

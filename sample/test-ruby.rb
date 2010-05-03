@@ -65,9 +65,9 @@ class MyDir < Hash
     else
       d=self[path_array.shift]
       if d then
-	return d.follow(path_array)
+        return d.follow(path_array)
       else
-	raise Errno::ENOENT.new
+        raise Errno::ENOENT.new
       end
     end
   end
@@ -290,17 +290,17 @@ class MyFuse < RFuse::Fuse
     end
   end
 
-  def write(ctx,path,buf,size,offset,fi)
-    puts "write:" + path + " size:" + size.to_s + " offset:" + offset.to_s
+  def write(ctx,path,buf,offset,fi)
+    puts "write:" + path
     puts ctx
     puts "content:" + buf
     d=@root.search(path)
     if (d.isdir) 
       raise Errno::EISDIR.new(path)
     else
-      d.content=buf
+      d.content[offset..offset+buf.length - 1] = buf
     end
-    return size
+    return buf.length
   end
 
   def setxattr(ctx,path,name,value,size,flags)
