@@ -1,3 +1,14 @@
+2010-05-03: 0.3.0
+
+Fixed read() and write() bugs, updated example. Implemented
+truncate() in the example.
+
+Fuse operation fields are filled only, when the class respond_to the
+particular method.
+
+The example filesystem was tested with several hundred big files and
+all came back intact.
+
 2010-05-01: 0.2.0
 
 Switched to Fuse API 26 from 22. Fixed incompatibilities.
