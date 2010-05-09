@@ -34,6 +34,16 @@ void rstatvfs2statvfs(VALUE rstatvfs,struct statvfs *statvfsbuf) {
   statvfsbuf->f_namemax = FIX2ULONG(rb_funcall(rstatvfs,rb_intern("f_namemax"),0));
 }
 
+void rfuseconninfo2fuseconninfo(VALUE rfuseconninfo,struct fuse_conn_info *fuseconninfo) {
+  fuseconninfo->proto_major   = FIX2UINT(rb_funcall(rfuseconninfo,rb_intern("proto_major"),0));
+  fuseconninfo->proto_minor   = FIX2UINT(rb_funcall(rfuseconninfo,rb_intern("proto_minor"),0));
+  fuseconninfo->async_read    = FIX2UINT(rb_funcall(rfuseconninfo,rb_intern("async_read"),0));
+  fuseconninfo->max_write     = FIX2UINT(rb_funcall(rfuseconninfo,rb_intern("max_write"),0));
+  fuseconninfo->max_readahead = FIX2UINT(rb_funcall(rfuseconninfo,rb_intern("max_readahead"),0));
+  fuseconninfo->capable       = FIX2UINT(rb_funcall(rfuseconninfo,rb_intern("capable"),0));
+  fuseconninfo->want          = FIX2UINT(rb_funcall(rfuseconninfo,rb_intern("want"),0));
+}
+
 struct fuse_args * rarray2fuseargs(VALUE rarray){
 
   Check_Type(rarray, T_ARRAY);

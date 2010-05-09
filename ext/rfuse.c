@@ -835,7 +835,7 @@ static int rf_setxattr(const char *path,const char *name,
   args[0]=rb_str_new2(path);
   args[1]=rb_str_new2(name);
   args[2]=rb_str_new(value,size);
-  args[3]=INT2NUM(size); //TODO:FIX would be faster
+  args[3]=INT2NUM(size);
   args[4]=INT2NUM(flags);
 
   res=rb_protect((VALUE (*)())unsafe_setxattr,(VALUE) args,&error);
@@ -1075,7 +1075,6 @@ static int rf_fsyncdir(const char *path,int meta,struct fuse_file_info *ffi)
 }
 
 //----------------------INIT
-
 static void *rf_init(struct fuse_conn_info *conn)
 {
   // TODO
