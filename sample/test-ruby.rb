@@ -1,4 +1,4 @@
-#!/usr/bin/ruby -rubygems
+#!/usr/bin/ruby
 
 # TestFS for RFuse-ng
 
@@ -122,26 +122,43 @@ class MyFile
   end
 end
 
-#TODO: atime,mtime,ctime...nicer classes not only fixnums
 class Stat
   attr_accessor :uid,:gid,:mode,:size,:atime,:mtime,:ctime 
   attr_accessor :dev,:ino,:nlink,:rdev,:blksize,:blocks
-  def initialize(uid,gid,mode,size,atime,mtime,ctime,rdev,blocks,nlink,dev,ino,blksize)
-    @uid=uid
-    @gid=gid
-    @mode=mode
-    @size=size
-    @atime=atime
-    @mtime=mtime
-    @ctime=ctime
-    @dev=dev
-    @ino=ino
-    @nlink=nlink
-    @rdev=rdev
-    @blksize=blksize
-    @blocks=blocks
+  def initialize
+    @uid     = 0
+    @gid     = 0
+    @mode    = 0
+    @size    = 0
+    @atime   = 0
+    @mtime   = 0
+    @ctime   = 0
+    @dev     = 0
+    @ino     = 0
+    @nlink   = 0
+    @rdev    = 0
+    @blksize = 0
+    @blocks  = 0
   end
-end #class Stat
+end
+
+class StatVfs
+  attr_accessor :f_bsize,:f_frsize,:f_blocks,:f_bfree,:f_bavail
+  attr_accessor :f_files,:f_ffree,:f_favail,:f_fsid,:f_flag,:f_namemax
+  def initialize
+    @f_bsize    = 0
+    @f_frsize   = 0
+    @f_blocks   = 0
+    @f_bfree    = 0
+    @f_bavail   = 0
+    @f_files    = 0
+    @f_ffree    = 0
+    @f_favail   = 0
+    @f_fsid     = 0
+    @f_flag     = 0
+    @f_namemax  = 0
+  end
+end
 
 class MyFuse < RFuse::Fuse
 
@@ -168,8 +185,13 @@ class MyFuse < RFuse::Fuse
     d=@root.search(path)
     if d.isdir then
       d.each {|name,obj| 
-        stat=Stat.new(obj.uid,obj.gid,obj.mode,obj.size,obj.actime,obj.modtime,
-        0,0,0,0,0,0,0)
+        stat = Stat.new
+        stat.uid   = obj.uid
+        stat.gid   = obj.gid
+        stat.mode  = obj.mode
+        stat.size  = obj.size
+        stat.atime = obj.actime
+        stat.mtime = obj.modtime
         filler.push(name,stat,0)
       }
     else
@@ -178,9 +200,14 @@ class MyFuse < RFuse::Fuse
   end
 
   def getattr(ctx,path)
-    d=@root.search(path)
-    stat=Stat.new(d.uid,d.gid,d.mode,d.size,d.actime,d.modtime,
-      0,0,0,0,0,0,0)
+    d = @root.search(path)
+    stat = Stat.new
+    stat.uid   = d.uid
+    stat.gid   = d.gid
+    stat.mode  = d.mode
+    stat.size  = d.size
+    stat.atime = d.actime
+    stat.mtime = d.modtime
     return stat
   end #getattr
 
@@ -192,8 +219,8 @@ class MyFuse < RFuse::Fuse
     @root.insert_obj(MyFile.new(File.basename(path),mode,ctx.uid,ctx.gid),path)
   end #mknod
 
-  #def open(ctx,path,ffi)
-  #end
+  def open(ctx,path,ffi)
+  end
 
   #def release(ctx,path,fi)
   #end
@@ -303,6 +330,23 @@ class MyFuse < RFuse::Fuse
   #def fsyncdir(ctx,path,meta,ffi)
   #end
 
+  # Some random numbers to show with df command
+  def statfs(ctx,path)
+    s = StatVfs.new
+    s.f_bsize    = 1024
+    s.f_frsize   = 1024
+    s.f_blocks   = 1000000
+    s.f_bfree    = 500000
+    s.f_bavail   = 990000
+    s.f_files    = 10000
+    s.f_ffree    = 9900
+    s.f_favail   = 9900
+    s.f_fsid     = 23423
+    s.f_flag     = 0
+    s.f_namemax  = 10000
+    return s
+  end
+
 end #class Fuse
 
 fo = MyFuse.new("/tmp/fuse",["allow_other"],["debug"], MyDir.new("",493));
@@ -318,7 +362,5 @@ end
 begin
   fo.loop
 rescue
-  f=File.new("/tmp/error","w+")
-  f.puts "Error:" + $!
-  f.close
+  print "Error:" + $!
 end

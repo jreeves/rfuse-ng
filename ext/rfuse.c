@@ -201,7 +201,6 @@ static VALUE unsafe_mknod(VALUE *args)
   return rb_funcall(fuse_object,rb_intern("mknod"),4,wrap_context(ctx),path,mode,dev);
 }
 
-//calls getattr with path and expects something like FuseStat back
 static int rf_mknod(const char *path, mode_t mode,dev_t dev)
 {
   VALUE args[3];
@@ -751,10 +750,35 @@ static int rf_write(const char *path,const char *buf,size_t size,
 }
 
 //----------------------STATFS
+static VALUE unsafe_statfs(VALUE *args)
+{
+  VALUE path = args[0];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall(fuse_object,rb_intern("statfs"),2,
+        wrap_context(ctx),path);
+}
+
 static int rf_statfs(const char * path, struct statvfs * vfsinfo)
 {
-  // TODO
-  return 0;
+  VALUE args[1];
+  VALUE res;
+  int error = 0;
+
+  args[0] = rb_str_new2(path);
+
+  res = rb_protect((VALUE (*)())unsafe_statfs,(VALUE) args,&error);
+
+  if (error || (res == Qnil))
+  {
+    return -(return_error(ENOENT));
+  }
+  else
+  {
+    rstatvfs2statvfs(res,vfsinfo);
+    return 0;
+  }
 }
 
 //----------------------SETXATTR
@@ -1275,7 +1299,7 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"write"))
     inf->fuse_op.write       = rf_write;
   if (RESPOND_TO(self,"statfs"))
-    inf->fuse_op.statfs      = rf_statfs;   //TODO
+    inf->fuse_op.statfs      = rf_statfs;
   if (RESPOND_TO(self,"flush"))
     inf->fuse_op.flush       = rf_flush;
   if (RESPOND_TO(self,"release"))
