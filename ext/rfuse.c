@@ -1078,6 +1078,7 @@ static int rf_fsyncdir(const char *path,int meta,struct fuse_file_info *ffi)
 static void *rf_init(struct fuse_conn_info *conn)
 {
   // TODO
+  // the data pointer returned by init will be put into ctx->private_data
   return NULL;
 }
 
