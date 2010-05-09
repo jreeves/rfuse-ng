@@ -160,21 +160,6 @@ class StatVfs
   end
 end
 
-class FuseConnInfo
-  attr_accessor :proto_major,:proto_minor,:async_read,:max_write
-  attr_accessor :max_readahead,:capable,:want
-
-  def initialize
-    @proto_major   = 0
-    @proto_minor   = 0
-    @async_read    = 0
-    @max_write     = 0
-    @max_readahead = 0
-    @capable       = 0
-    @want          = 0
-  end
-end
-
 class MyFuse < RFuse::Fuse
 
   def initialize(mnt,kernelopt,libopt,root)
@@ -360,6 +345,14 @@ class MyFuse < RFuse::Fuse
     s.f_flag     = 0
     s.f_namemax  = 10000
     return s
+  end
+
+  def init(ctx,rfuseconninfo)
+    print "init called\n"
+    print "proto_major: "
+    print rfuseconninfo.proto_major
+    print "\n"
+    return nil
   end
 
 end #class Fuse

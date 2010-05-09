@@ -1050,7 +1050,7 @@ static VALUE unsafe_fsyncdir(VALUE *args)
 
   struct fuse_context *ctx=fuse_get_context();
 
-  return rb_funcall(fuse_object,rb_intern("fsyncdir"),3,wrap_context(ctx),path,
+  return rb_funcall(fuse_object,rb_intern("fsyncdir"),4,wrap_context(ctx),path,
         meta,ffi);
 }
 
@@ -1075,11 +1075,56 @@ static int rf_fsyncdir(const char *path,int meta,struct fuse_file_info *ffi)
 }
 
 //----------------------INIT
+static VALUE unsafe_init(VALUE* args)
+{
+  VALUE rfuseconninfo = args[0];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall(fuse_object,rb_intern("init"),2,wrap_context(ctx),
+    rfuseconninfo);
+}
+
 static void *rf_init(struct fuse_conn_info *conn)
 {
-  // TODO
-  // the data pointer returned by init will be put into ctx->private_data
-  return NULL;
+  VALUE args[1];
+  VALUE res;
+  int error = 0;
+
+  //Create a struct for the conn_info
+  VALUE s  = rb_const_get(rb_cObject,rb_intern("Struct"));
+  VALUE fci = rb_funcall(s,rb_intern("new"),7,
+    ID2SYM(rb_intern("proto_major")),
+    ID2SYM(rb_intern("proto_minor")),
+    ID2SYM(rb_intern("async_read")),
+    ID2SYM(rb_intern("max_write")),
+    ID2SYM(rb_intern("max_readahead")),
+    ID2SYM(rb_intern("capable")),
+    ID2SYM(rb_intern("want"))
+  );
+
+  VALUE fcio = rb_funcall(fci,rb_intern("new"),7,
+    UINT2NUM(conn->proto_major),
+    UINT2NUM(conn->proto_minor),
+    UINT2NUM(conn->async_read),
+    UINT2NUM(conn->max_write),
+    UINT2NUM(conn->max_readahead),
+    UINT2NUM(conn->capable),
+    UINT2NUM(conn->want)
+  );
+
+  args[0] = fcio;
+
+  res = rb_protect((VALUE (*)())unsafe_init,(VALUE) args,&error);
+
+  if (error)
+  {
+    return NULL;
+  }
+  else
+  {
+    return (void *)res;
+  }
 }
 
 //----------------------DESTROY
@@ -1350,7 +1395,7 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"fsyncdir"))
     inf->fuse_op.fsyncdir    = rf_fsyncdir;
   if (RESPOND_TO(self,"init"))
-    inf->fuse_op.init        = rf_init;      // TODO
+    inf->fuse_op.init        = rf_init;
   if (RESPOND_TO(self,"destroy"))
     inf->fuse_op.destroy     = rf_destroy;   // TODO
   if (RESPOND_TO(self,"access"))
