@@ -344,10 +344,37 @@ static int rf_release(const char *path, struct fuse_file_info *ffi)
 }
 
 //----------------------FSYNC
+static VALUE unsafe_fsync(VALUE *args) {
+  VALUE path     = args[0];
+  VALUE datasync = args[1];
+  VALUE ffi      = args[2];
+
+  struct fuse_context *ctx=fuse_get_context();
+
+  return rb_funcall(fuse_object,rb_intern("fsync"), 4, wrap_context(ctx),
+    path, datasync, ffi);
+}
+
 static int rf_fsync(const char *path, int datasync, struct fuse_file_info *ffi)
 {
-  //TODO
-  return 0;
+  VALUE args[3];
+  VALUE res;
+  int error = 0;
+
+  args[0] = rb_str_new2(path);
+  args[1] = INT2NUM(datasync);
+  args[2] = wrap_file_info(ffi);
+
+  res = rb_protect((VALUE (*)())unsafe_fsync,(VALUE) args,&error);
+
+  if (error)
+  {
+    return -(return_error(ENOENT));
+  }
+  else
+  {
+    return 0;
+  }
 }
 
 //----------------------FLUSH
@@ -1305,7 +1332,7 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"release"))
     inf->fuse_op.release     = rf_release;
   if (RESPOND_TO(self,"fsync"))
-    inf->fuse_op.fsync       = rf_fsync;    // TODO
+    inf->fuse_op.fsync       = rf_fsync;
   if (RESPOND_TO(self,"setxattr"))
     inf->fuse_op.setxattr    = rf_setxattr;
   if (RESPOND_TO(self,"getxattr"))
