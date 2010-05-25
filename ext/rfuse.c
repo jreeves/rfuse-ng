@@ -1152,10 +1152,34 @@ static void rf_destroy(void *user_data)
 
 //----------------------ACCESS
 
+static VALUE unsafe_access(VALUE* args)
+{
+  VALUE path = args[0];
+  VALUE mask = args[1];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall(fuse_object,rb_intern("access"),3,wrap_context(ctx),
+    path, mask);
+}
+
 static int rf_access(const char *path, int mask)
 {
-  // TODO
-  return 0;
+  VALUE args[2];
+  VALUE res;
+  int error = 0;
+  args[0] = rb_str_new2(path);
+  args[1] = INT2NUM(mask);
+  res = rb_protect((VALUE (*)())unsafe_access,(VALUE) args,&error);
+
+  if (error)
+  {
+    return -(return_error(ENOENT));
+  }
+  else
+  {
+    return 0;
+  }
 }
 
 //----------------------CREATE
@@ -1413,9 +1437,9 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"init"))
     inf->fuse_op.init        = rf_init;
   if (RESPOND_TO(self,"destroy"))
-    inf->fuse_op.destroy     = rf_destroy;   // TODO
+    inf->fuse_op.destroy     = rf_destroy;
   if (RESPOND_TO(self,"access"))
-    inf->fuse_op.access      = rf_access;    // TODO
+    inf->fuse_op.access      = rf_access;
   if (RESPOND_TO(self,"create"))
     inf->fuse_op.create      = rf_create;    // TODO
   if (RESPOND_TO(self,"ftruncate"))
