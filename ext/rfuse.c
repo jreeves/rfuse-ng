@@ -1258,11 +1258,38 @@ static int rf_ftruncate(const char *path, off_t size,
 
 //----------------------FGETATTR
 
+static VALUE unsafe_fgetattr(VALUE *args)
+{
+  VALUE path = args[0];
+  VALUE ffi  = args[1];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall(fuse_object,rb_intern("fgetattr"),3,wrap_context(ctx),
+    path,ffi);
+}
+
 static int rf_fgetattr(const char *path, struct stat *stbuf,
   struct fuse_file_info *ffi)
 {
-  // TODO
-  return 0;
+  VALUE args[2];
+  VALUE res;
+  int error = 0;
+
+  args[0] = rb_str_new2(path);
+  args[1] = wrap_file_info(ffi);
+
+  res=rb_protect((VALUE (*)())unsafe_fgetattr,(VALUE) args,&error);
+
+  if (error || (res == Qnil))
+  {
+    return -(return_error(ENOENT));
+  }
+  else
+  {
+    rstat2stat(res,stbuf);
+    return 0;
+  }
 }
 
 //----------------------LOCK
@@ -1501,7 +1528,7 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"ftruncate"))
     inf->fuse_op.ftruncate   = rf_ftruncate;
   if (RESPOND_TO(self,"fgetattr"))
-    inf->fuse_op.fgetattr    = rf_fgetattr;  // TODO
+    inf->fuse_op.fgetattr    = rf_fgetattr;
   if (RESPOND_TO(self,"lock"))
     inf->fuse_op.lock        = rf_lock;      // TODO
   if (RESPOND_TO(self,"utimens"))
