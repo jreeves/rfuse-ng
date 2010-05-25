@@ -933,14 +933,14 @@ static int rf_listxattr(const char *path,char *buf,
       } else {
         return -ERANGE;
       }
-      printf("destination: %s,%d\n",buf,size);
-      printf("source:      %s,%d\n",rbuf,length);
+      printf("destination: %s,%zd\n",buf,size);
+      printf("source:      %s,%zd\n",rbuf,length);
       return length;
       //TODO optimize,check lenght
     }
     else
     {
-      printf ("not copied: %s, %d\n",buf,length);
+      printf ("not copied: %s, %zd\n",buf,length);
       return length;
     }
   }
