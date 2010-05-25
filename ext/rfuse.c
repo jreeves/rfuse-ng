@@ -1129,9 +1129,25 @@ static void *rf_init(struct fuse_conn_info *conn)
 
 //----------------------DESTROY
 
+static VALUE unsafe_destroy(VALUE* args)
+{
+  VALUE user_data = args[0];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall(fuse_object,rb_intern("destroy"),2,wrap_context(ctx),
+    user_data);
+}
+
 static void rf_destroy(void *user_data)
 {
-  // TODO
+  VALUE args[1];
+  int error = 0;
+
+  args[0] = (VALUE)user_data;
+
+  rb_protect((VALUE (*)())unsafe_destroy,(VALUE) args,&error);
+  // TODO: some kind of logging would be nice here.
 }
 
 //----------------------ACCESS
