@@ -1405,10 +1405,39 @@ static int rf_utimens(const char * path, const struct timespec tv[2])
 
 //----------------------BMAP
 
+static VALUE unsafe_bmap(VALUE *args)
+{
+  VALUE path      = args[0];
+  VALUE blocksize = args[1];
+  VALUE idx       = args[2];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall( fuse_object, rb_intern("bmap"), 4, wrap_context(ctx),
+    path, blocksize, idx);
+}
+
 static int rf_bmap(const char *path, size_t blocksize, uint64_t *idx)
 {
-  //TODO
-  return 0;
+  VALUE args[3];
+  VALUE res;
+  int   error = 0;
+
+  args[0] = rb_str_new2(path);
+  args[1] = INT2NUM(blocksize);
+  args[2] = LL2NUM(*idx);
+
+  res = rb_protect((VALUE (*)())unsafe_bmap,(VALUE) args, &error);
+
+  if (error)
+  {
+    return -(return_error(ENOENT));
+  }
+  else
+  {
+    *idx = NUM2LL(args[2]);
+    return 0;
+  }
 }
 
 //----------------------IOCTL
@@ -1582,7 +1611,7 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"utimens"))
     inf->fuse_op.utimens     = rf_utimens;
   if (RESPOND_TO(self,"bmap"))
-    inf->fuse_op.bmap        = rf_bmap;      // TODO
+    inf->fuse_op.bmap        = rf_bmap;
   if (RESPOND_TO(self,"ioctl"))
     inf->fuse_op.ioctl       = rf_ioctl;     // TODO
   if (RESPOND_TO(self,"poll"))
