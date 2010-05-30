@@ -1294,11 +1294,59 @@ static int rf_fgetattr(const char *path, struct stat *stbuf,
 
 //----------------------LOCK
 
+static VALUE unsafe_lock(VALUE *args)
+{
+  VALUE path = args[0];
+  VALUE ffi  = args[1];
+  VALUE cmd  = args[2];
+  VALUE lock = args[3];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall(fuse_object,rb_intern("lock"),5,wrap_context(ctx),
+    path,ffi,cmd,lock);
+}
+
 static int rf_lock(const char *path, struct fuse_file_info *ffi,
   int cmd, struct flock *lock)
 {
-  // TODO
-  return 0;
+  VALUE args[4];
+  VALUE res;
+  int error = 0;
+
+  //Create a struct for the lock structure
+  VALUE s  = rb_const_get(rb_cObject,rb_intern("Struct"));
+  VALUE lockc = rb_funcall(s,rb_intern("new"),5,
+    ID2SYM(rb_intern("l_type")),
+    ID2SYM(rb_intern("l_whence")),
+    ID2SYM(rb_intern("l_start")),
+    ID2SYM(rb_intern("l_len")),
+    ID2SYM(rb_intern("l_pid"))
+  );
+
+  VALUE locko = rb_funcall(lockc,rb_intern("new"),5,
+    UINT2NUM(lock->l_type),
+    UINT2NUM(lock->l_whence),
+    UINT2NUM(lock->l_start),
+    UINT2NUM(lock->l_len),
+    UINT2NUM(lock->l_pid)
+  );
+
+  args[0] = rb_str_new2(path);
+  args[1] = wrap_file_info(ffi);
+  args[2] = INT2NUM(cmd);
+  args[3] = locko;
+
+  res = rb_protect((VALUE (*)())unsafe_lock,(VALUE) args,&error);
+
+  if (error)
+  {
+    return -(return_error(ENOENT));
+  }
+  else
+  {
+    return 0;
+  }
 }
 
 //----------------------UTIMENS
@@ -1530,7 +1578,7 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"fgetattr"))
     inf->fuse_op.fgetattr    = rf_fgetattr;
   if (RESPOND_TO(self,"lock"))
-    inf->fuse_op.lock        = rf_lock;      // TODO
+    inf->fuse_op.lock        = rf_lock;
   if (RESPOND_TO(self,"utimens"))
     inf->fuse_op.utimens     = rf_utimens;
   if (RESPOND_TO(self,"bmap"))
