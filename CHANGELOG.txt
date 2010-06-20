@@ -1,3 +1,9 @@
+2010-06-20
+
+Only poll() and ioctl() are missing. Fixed compilation error
+on 64 bit systems and random segfault because of uninicialized
+memory
+
 2010-05-03: 0.3.0
 
 Fixed read() and write() bugs, updated example. Implemented
