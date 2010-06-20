@@ -24,4 +24,4 @@ functions.
 
 2010-05-01: 0.1
 
-Froked from rfuse, fixed compile warnings, gemified.
+Forked from rfuse, fixed compile warnings, gemified.
