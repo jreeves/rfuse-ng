@@ -6,6 +6,7 @@
 struct intern_fuse *intern_fuse_new() {
   struct intern_fuse *inf;
   inf = (struct intern_fuse *) malloc(sizeof(struct intern_fuse));
+  memset(&inf->fuse_op, 0, sizeof(struct fuse_operations));
   return inf;
 };
 
