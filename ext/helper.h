@@ -11,4 +11,7 @@ void rstatvfs2statvfs(VALUE rstatvfs,struct statvfs *statvfsbuf);
 void rfuseconninfo2fuseconninfo(VALUE rfuseconninfo,struct fuse_conn_info *fuseconninfo);
 struct fuse_args * rarray2fuseargs(VALUE rarray);
 
+#define STR2CSTR(X) StringValuePtr(X) 
+
+
 #endif

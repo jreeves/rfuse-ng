@@ -22,6 +22,10 @@
 //this is a global variable where we store the fuse object
 static VALUE fuse_object;
 
+#define ruby_errinfo rb_errinfo()
+#define STR2CSTR(X) StringValuePtr(X) 
+
+
 static int unsafe_return_error(VALUE *args)
 {
   VALUE info;
@@ -701,6 +705,22 @@ static VALUE unsafe_read(VALUE *args)
         wrap_context(ctx),path,size,offset,ffi);
 }
 
+
+
+char*
+rb_str2cstr(str, len)
+    VALUE str;
+    long *len;
+{
+    StringValue(str);
+    if (len) *len = RSTRING_LEN(str);
+    else if (RTEST(ruby_verbose) &&  RSTRING_LEN(str) != ((long)strlen(RSTRING_PTR(str))) )  {
+	rb_warn("string contains \\0 character");
+    }
+    return RSTRING_PTR(str);
+}
+
+
 static int rf_read(const char *path,char * buf, size_t size,off_t offset,struct fuse_file_info *ffi)
 {
   VALUE args[4];
@@ -724,7 +744,7 @@ static int rf_read(const char *path,char * buf, size_t size,off_t offset,struct 
   {
     length = NUM2LONG(rb_funcall(res, rb_intern("length"), 0));
     rbuf = rb_str2cstr(res, &length);
-    if (length<=size)
+    if (length<=(long)size)
     {
       memcpy(buf,rbuf,length);
       return length;
@@ -1536,6 +1556,7 @@ static VALUE rf_initialize(
 
   struct intern_fuse *inf;
   Data_Get_Struct(self,struct intern_fuse,inf);
+
   if (RESPOND_TO(self,"getattr"))
     inf->fuse_op.getattr     = rf_getattr;
   if (RESPOND_TO(self,"readlink"))
@@ -1617,11 +1638,13 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"poll"))
     inf->fuse_op.poll        = rf_poll;      // TODO
 
+
   struct fuse_args
     *kargs = rarray2fuseargs(kernelopts),
     *largs = rarray2fuseargs(libopts);
 
   intern_fuse_init(inf, STR2CSTR(mountpoint), kargs, largs);
+
 
   //TODO this won't work with multithreading!!!
   fuse_object=self;
