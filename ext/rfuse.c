@@ -22,17 +22,33 @@
 //this is a global variable where we store the fuse object
 static VALUE fuse_object;
 
-#define ruby_errinfo rb_errinfo()
-#define STR2CSTR(X) StringValuePtr(X) 
+#if defined(RUBY_VERSION) && RUBY_VERSION >= 19
+  #define ruby_errinfo rb_errinfo
+  #define STR2CSTR(X) StringValuePtr(X) 
+#endif
+
+// #define ruby_errinfo rb_errinfo()
+
 
 
 static int unsafe_return_error(VALUE *args)
 {
-  VALUE info;
-  info = rb_inspect(ruby_errinfo);
-  rb_backtrace();
-  printf ("ERROR %s\n",STR2CSTR(info));
-  return rb_funcall(info,rb_intern("errno"),0);
+ 
+  if (rb_respond_to(ruby_errinfo,rb_intern("errno"))) {
+    //We expect these and they get passed on the fuse so be quiet...
+    return rb_funcall(ruby_errinfo,rb_intern("errno"),0);
+  } else {
+    VALUE info;
+    info = rb_inspect(ruby_errinfo);
+    printf ("ERROR: Exception %s not an Errno:: !respond_to?(:errno) \n",STR2CSTR(info)); 
+    //We need the ruby_errinfo backtrace not fuse.loop ... rb_backtrace();
+    VALUE bt_ary = rb_funcall(ruby_errinfo, rb_intern("backtrace"),0);
+    int c;
+    for (c=0;c<RARRAY(bt_ary)->len;c++) {
+      printf("%s\n",RSTRING(RARRAY(bt_ary)->ptr[c])->ptr);
+    }
+    return Qnil;
+  }
 }
 
 static int return_error(int def_error)
@@ -43,14 +59,14 @@ static int return_error(int def_error)
   int error = 0;
   res=rb_protect((VALUE (*)())unsafe_return_error,Qnil,&error);
   if (error)
-  { //this exception has no errno method or something else 
-    //went wrong
-    printf ("ERROR: Not an Errno::xxx error or exception in exception!\n");
+  { 
+    //something went wrong resolving the exception
+    printf ("ERROR: Exception in exception!\n");
     return def_error;
   }
-  else
+  else 
   {
-    return FIX2INT(res);
+    return NIL_P(res) ? def_error : FIX2INT(res);
   }
 }
 
@@ -304,6 +320,7 @@ static int rf_open(const char *path,struct fuse_file_info *ffi)
   VALUE res;
   int error = 0;
   args[0]=rb_str_new2(path);
+  //GG: is args[1] kept on the stack and thus referenced from the GC's perspective?
   args[1]=wrap_file_info(ffi);
   res=rb_protect((VALUE (*)())unsafe_open,(VALUE) args,&error);
   if (error)
@@ -312,6 +329,10 @@ static int rf_open(const char *path,struct fuse_file_info *ffi)
   }
   else
   {
+    if (TYPE(ffi->fh) != T_NONE) {
+       //Make sure the GC doesn't collect our FileHandle
+       rb_gc_register_address((VALUE*) &ffi->fh);
+    }
     return 0;
   }
 }
@@ -336,7 +357,9 @@ static int rf_release(const char *path, struct fuse_file_info *ffi)
   args[0]=rb_str_new2(path);
   args[1]=wrap_file_info(ffi);
   res=rb_protect((VALUE (*)())unsafe_release,(VALUE) args,&error);
-
+  if (TYPE(ffi->fh) != T_NONE) {
+     rb_gc_unregister_address((VALUE*) &ffi->fh);
+  }
   if (error)
   {
     return -(return_error(ENOENT));
@@ -1536,6 +1559,25 @@ VALUE rf_invalidate(VALUE self,VALUE path)
   return fuse_invalidate(inf->fuse,STR2CSTR(path)); //TODO: check if str?
 }
 
+//---------------------- fd
+// Return /dev/fuse file descriptor for use with IO.select
+VALUE rf_fd(VALUE self)
+{
+ struct intern_fuse *inf;
+ Data_Get_Struct(self,struct intern_fuse,inf);
+ return INT2NUM(intern_fuse_fd(inf));
+}
+
+//--------------------- process
+// Process one fuse command from the kernel
+// returns < 0 if we're not mounted.. won't be this simple in a mt scenario
+VALUE rf_process(VALUE self)
+{
+ struct intern_fuse *inf;
+ Data_Get_Struct(self,struct intern_fuse,inf);
+ return INT2NUM(intern_fuse_process(inf));
+}
+
 #define RESPOND_TO(obj,methodname) \
   rb_funcall( \
     obj,rb_intern("respond_to?"), \
@@ -1674,6 +1716,8 @@ VALUE rfuse_init(VALUE module)
   rb_define_method(cFuse,"invalidate",rf_invalidate,1);
   rb_define_method(cFuse,"unmount",rf_unmount,0);
   rb_define_method(cFuse,"mountname",rf_mountname,0);
+ rb_define_method(cFuse,"fd",rf_fd,0);
+ rb_define_method(cFuse,"process",rf_process,0);
 
   return cFuse;
 }

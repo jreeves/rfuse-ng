@@ -1,8 +1,7 @@
+#include "intern_rfuse.h"
+#include <fuse/fuse_lowlevel.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fuse.h>
-#include "intern_rfuse.h"
-
 struct intern_fuse *intern_fuse_new() {
   struct intern_fuse *inf;
   inf = (struct intern_fuse *) malloc(sizeof(struct intern_fuse));
@@ -41,3 +40,33 @@ int intern_fuse_init(
   strncpy(inf->mountname, mountpoint, MOUNTNAME_MAX);
   return 0;
 };
+
+// Return the /dev/fuse file descriptor for use with IO.select
+int intern_fuse_fd(struct intern_fuse *inf) {
+ if (inf->fc == NULL) {
+ return -1;
+ }
+ struct fuse_chan *fc = inf->fc;
+ return fuse_chan_fd(fc);
+}
+
+//Process one fuse command (ie after IO.select)
+int intern_fuse_process(struct intern_fuse *inf) {
+ if (inf->fuse == NULL) {
+ return -1;
+ }
+
+
+ if (fuse_exited(inf->fuse)) {
+ return -1;
+ }
+
+ struct fuse_cmd *cmd;
+ cmd = fuse_read_cmd(inf->fuse);
+ if (cmd != NULL) {
+ fuse_process_cmd(inf->fuse, cmd);
+ }
+ return 0;
+}
+
+

@@ -16,10 +16,15 @@ VALUE rfiller_new(VALUE class){
 VALUE rfiller_push(VALUE self, VALUE name, VALUE stat, VALUE offset) {
   struct filler_t *f;
   Data_Get_Struct(self,struct filler_t,f);
-  struct stat st;
-  memset(&st, 0, sizeof(st));
-  rstat2stat(stat,&st);
-  f->filler(f->buffer,STR2CSTR(name),&st,NUM2LONG(offset));
+  //Allow nil return instead of a stat
+  if (NIL_P(stat)) {
+    f->filler(f->buffer,STR2CSTR(name),NULL,NUM2LONG(offset));
+  } else {
+    struct stat st;
+    memset(&st, 0, sizeof(st));
+    rstat2stat(stat,&st);
+    f->filler(f->buffer,STR2CSTR(name),&st,NUM2LONG(offset));
+  }
   return self;
 }
 

@@ -20,4 +20,7 @@ int intern_fuse_init(
   struct fuse_args *libopts
 );
 
+int intern_fuse_fd(struct intern_fuse *inf);
+int intern_fuse_process(struct intern_fuse *inf);
+
 int intern_fuse_destroy(struct intern_fuse *inf);
