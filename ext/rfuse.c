@@ -25,14 +25,17 @@
 //this is a global variable where we store the fuse object
 static VALUE fuse_object;
 
-#if defined(RUBY_VERSION) && RUBY_VERSION >= 19
-  #define ruby_errinfo rb_errinfo
+#if !defined(STR2CSTR)
   #define STR2CSTR(X) StringValuePtr(X) 
 #endif
 
-// #define ruby_errinfo rb_errinfo()
-
-
+// The ugliest hack I've seen today
+#if HAVE_RUBY_RUBY_H
+  static VALUE ruby_errinfo()
+  {
+    return rb_errinfo();
+  }
+#endif
 
 static int unsafe_return_error(VALUE *args)
 {
