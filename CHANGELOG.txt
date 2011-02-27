@@ -12,6 +12,8 @@ Pathces:
 YM-1: ruby_19_yonatan.pathc
   * allow rfuse-ng to compile under ruby 1.9.2
 
+  This version actually does not compile. But good try. Maybe later.
+
 GG-1: 0001-allow-nil-for-readder-filler.patch
   * allow readdir to push "nil" as the stat value into filler (fuse will
     then call getattr() when required)
