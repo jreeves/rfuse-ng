@@ -347,7 +347,21 @@ class MyFuse < RFuse::Fuse
     return s
   end
 
+  def ioctl(ctx, path, cmd, arg, ffi, flags, data)
+    # FT: I was not been able to test it.
+    print "*** IOCTL: command: ", cmd, "\n"
+  end
+
+  def poll(ctx, path, ffi, ph, reventsp)
+    print "*** POLL: ", path, "\n"
+    # This is how we notify the caller if something happens:
+    ph.notifyPoll();
+    # when the GC harvests the object it calls fuse_pollhandle_destroy
+    # by itself.
+  end
+
   def init(ctx,rfuseconninfo)
+    print "RFuse-ng TestFS started\n"
     print "init called\n"
     print "proto_major: "
     print rfuseconninfo.proto_major
@@ -357,7 +371,13 @@ class MyFuse < RFuse::Fuse
 
 end #class Fuse
 
-fo = MyFuse.new("/tmp/fuse",["allow_other"],["debug"], MyDir.new("",493));
+# Parameters are intended to passed as array elements. This clearly don't
+# work with kernel options. The first element is discarded and the first
+# element after the -o is also discarded. Somebody please figure this out,
+# I already wasted half my weekend trying to solve this.
+
+fo = MyFuse.new("/tmp/fuse",["notparsed","-o notparsed,allow_other"],["debug"], MyDir.new("",0777));
+
 #kernel:  default_permissions,allow_other,kernel_cache,large_read,direct_io
 #         max_read=N,fsname=NAME
 #library: debug,hard_remove

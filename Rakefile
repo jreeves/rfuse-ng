@@ -7,7 +7,7 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "rfuse-ng"
-    gem.version = "0.4.0"
+    gem.version = "0.5.0"
     gem.summary = 'Ruby language binding for FUSE'
     gem.description = 'Ruby language binding for FUSE. It was forked from rfuse'
     gem.rubyforge_project = 'rfuse-ng'

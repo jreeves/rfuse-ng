@@ -27,11 +27,10 @@ VALUE file_info_initialize(VALUE self){
 
 //TODO GG: This probably needs a free function and be converted to alloc/initialize
 //but this probably never gets called anyway
+//TODO FT: test: this _should_not_ be called, an exception would do the trick :)
 VALUE file_info_new(VALUE class){
-  VALUE self;
-  struct fuse_file_info *f;
-  self = Data_Make_Struct(class, struct fuse_file_info, 0,NULL,f);
-  return self;
+  rb_raise(rb_eNotImpError, "new() not implemented (it has no use), and should not be called");
+  return Qnil;
 }
 
 VALUE file_info_writepage(VALUE self) {

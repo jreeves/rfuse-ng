@@ -22,5 +22,4 @@ int intern_fuse_init(
 
 int intern_fuse_fd(struct intern_fuse *inf);
 int intern_fuse_process(struct intern_fuse *inf);
-
 int intern_fuse_destroy(struct intern_fuse *inf);

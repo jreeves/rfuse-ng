@@ -17,7 +17,10 @@
 #include "intern_rfuse.h"
 #include "filler.h"
 #include "context.h"
+
 #include "file_info.h"
+#include "pollhandle.h"
+#include "bufferwrapper.h"
 
 //this is a global variable where we store the fuse object
 static VALUE fuse_object;
@@ -1485,19 +1488,82 @@ static int rf_bmap(const char *path, size_t blocksize, uint64_t *idx)
 
 //----------------------IOCTL
 
+static VALUE unsafe_ioctl(VALUE *args)
+{
+  VALUE path  = args[0];
+  VALUE cmd   = args[1];
+  VALUE arg   = args[2];
+  VALUE ffi   = args[3];
+  VALUE flags = args[4];
+  VALUE data  = args[5];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall( fuse_object, rb_intern("ioctl"), 7, wrap_context(ctx),
+    path, cmd, arg, ffi, flags, data);
+}
+
 static int rf_ioctl(const char *path, int cmd, void *arg,
   struct fuse_file_info *ffi, unsigned int flags, void *data)
 {
-  //TODO
+  VALUE args[6];
+  VALUE res;
+  int   error = 0;
+
+  args[0] = rb_str_new2(path);
+  args[1] = INT2NUM(cmd);
+  args[2] = wrap_buffer(arg);
+  args[3] = wrap_file_info(ffi);
+  args[4] = INT2NUM(flags);
+  args[5] = wrap_buffer(data);
+
+  res = rb_protect((VALUE (*)())unsafe_ioctl,(VALUE) args, &error);
+
+  if (error)
+  {
+    return -(return_error(ENOENT));
+  }
+
   return 0;
 }
 
 //----------------------POLL
 
+static VALUE unsafe_poll(VALUE *args)
+{
+  VALUE path     = args[0];
+  VALUE ffi      = args[1];
+  VALUE ph       = args[2];
+  VALUE reventsp = args[3];
+
+  struct fuse_context *ctx = fuse_get_context();
+
+  return rb_funcall( fuse_object, rb_intern("poll"), 5, wrap_context(ctx),
+    path, ffi, ph, reventsp);
+}
+
 static int rf_poll(const char *path, struct fuse_file_info *ffi,
   struct fuse_pollhandle *ph, unsigned *reventsp)
 {
-  //TODO
+  VALUE args[4];
+  VALUE res;
+  int   error = 0;
+
+  args[0] = rb_str_new2(path);
+  args[1] = wrap_file_info(ffi);
+  args[2] = wrap_pollhandle(ph);
+  args[3] = INT2NUM(*reventsp);
+
+  res = rb_protect((VALUE (*)())unsafe_poll,(VALUE) args, &error);
+
+  if (error)
+  {
+    return -(return_error(ENOENT));
+  }
+  else
+  {
+    *reventsp = NUM2INT(args[3]);
+  }
   return 0;
 }
 
@@ -1559,7 +1625,7 @@ VALUE rf_invalidate(VALUE self,VALUE path)
   return fuse_invalidate(inf->fuse,STR2CSTR(path)); //TODO: check if str?
 }
 
-//---------------------- fd
+//----------------------FD
 // Return /dev/fuse file descriptor for use with IO.select
 VALUE rf_fd(VALUE self)
 {
@@ -1568,7 +1634,7 @@ VALUE rf_fd(VALUE self)
  return INT2NUM(intern_fuse_fd(inf));
 }
 
-//--------------------- process
+//----------------------PROCESS
 // Process one fuse command from the kernel
 // returns < 0 if we're not mounted.. won't be this simple in a mt scenario
 VALUE rf_process(VALUE self)
@@ -1593,8 +1659,8 @@ static VALUE rf_initialize(
   VALUE libopts)
 {
   Check_Type(mountpoint, T_STRING);
-
-  // getdir is deprecated, use readdir instead
+  Check_Type(kernelopts, T_ARRAY);
+  Check_Type(libopts, T_ARRAY);
 
   struct intern_fuse *inf;
   Data_Get_Struct(self,struct intern_fuse,inf);
@@ -1676,9 +1742,9 @@ static VALUE rf_initialize(
   if (RESPOND_TO(self,"bmap"))
     inf->fuse_op.bmap        = rf_bmap;
   if (RESPOND_TO(self,"ioctl"))
-    inf->fuse_op.ioctl       = rf_ioctl;     // TODO
+    inf->fuse_op.ioctl       = rf_ioctl;
   if (RESPOND_TO(self,"poll"))
-    inf->fuse_op.poll        = rf_poll;      // TODO
+    inf->fuse_op.poll        = rf_poll;
 
 
   struct fuse_args
@@ -1686,7 +1752,6 @@ static VALUE rf_initialize(
     *largs = rarray2fuseargs(libopts);
 
   intern_fuse_init(inf, STR2CSTR(mountpoint), kargs, largs);
-
 
   //TODO this won't work with multithreading!!!
   fuse_object=self;
@@ -1699,7 +1764,7 @@ static VALUE rf_new(VALUE class)
   struct intern_fuse *inf;
   VALUE self;
   inf = intern_fuse_new();
-  self=Data_Wrap_Struct(class, 0,intern_fuse_destroy,inf);
+  self=Data_Wrap_Struct(class, 0, intern_fuse_destroy, inf);
   return self;
 }
 
@@ -1711,13 +1776,13 @@ VALUE rfuse_init(VALUE module)
 
   rb_define_method(cFuse,"initialize",rf_initialize,3);
   rb_define_method(cFuse,"loop",rf_loop,0);
-  rb_define_method(cFuse,"loop_mt",rf_loop_mt,0); //TODO: not until RIKE!
+  rb_define_method(cFuse,"loop_mt",rf_loop_mt,0); //TODO: multithreading
   rb_define_method(cFuse,"exit",rf_exit,0);
   rb_define_method(cFuse,"invalidate",rf_invalidate,1);
   rb_define_method(cFuse,"unmount",rf_unmount,0);
   rb_define_method(cFuse,"mountname",rf_mountname,0);
- rb_define_method(cFuse,"fd",rf_fd,0);
- rb_define_method(cFuse,"process",rf_process,0);
+  rb_define_method(cFuse,"fd",rf_fd,0);
+  rb_define_method(cFuse,"process",rf_process,0);
 
   return cFuse;
 }
