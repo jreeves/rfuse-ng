@@ -3,12 +3,19 @@
 #define _XOPEN_SOURCE 500
 #endif
 //FOR LINUX ONLY
+#ifdef HAVE_LINUX_STAT_H
 #include <linux/stat.h> 
+#endif
 
 #include <ruby.h>
 #include <fuse.h>
 #include <errno.h>
+#ifdef HAVE_SYS_STATFS_H
 #include <sys/statfs.h>
+#endif
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
