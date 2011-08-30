@@ -5,3 +5,5 @@ pkg
 *~
 Makefile
 pushgem.sh
+Gemfile.lock
+mkmf.log
